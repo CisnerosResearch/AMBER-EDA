@@ -1,0 +1,2 @@
+EDA_new.inp
+my_solvated_system.prmtop
