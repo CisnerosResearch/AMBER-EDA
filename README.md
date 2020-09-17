@@ -95,6 +95,14 @@ solvated_complex_md9.mdcrd
 solvated_complex_md10.mdcrd
 ```
 
+> **Note**: The chain reading method assumes that either all the trajectory
+> files have the same number of samples (frames), **or** that the largest
+> trajectory file is read in first.
+> If you have trajectory files with differing numbers of frames, read in the
+> file with the most frames first.
+> The calculation relies on an ensemble average across all frames, so time
+> sequence isn't important here.
+
 ### `ans.txt`
 
 The program has file prompts, which can be answered as input through the
@@ -123,3 +131,13 @@ The program will have 3 output files: `fort_sanity_check.txt`,
 
 A number of R-based analysis scripts and their explanations can be found on
 [emleddin's GitHub](https://github.com/emleddin/research-scripts/tree/main/analysis/EDA).
+
+## Related Publications
+
+These publications include an explanation of the program/equations and present
+results obtained through it.
+
+- [Graham S.E., Syeda FS. Cisneros G.A., “Computational prediction of residues involved in fidelity checking for DNA synthesis in DNA polymerase I”, *Biochemistry*, 51, 2569-2578, 2012.](https://doi.org/10.1021/bi201856m)
+- [Elias A., Cisneros G.A., “Computational Study of Putative Residues Involved in, DNA Synthesis Fidelity Checking in Thermus aquaticus DNA Polymerase I” , in *Advances in Protein and Structural Biology: Biomolecular Modelling and Simulations*, Vol. 96, Ed. T. Karabencheva-Christova, pp. 35–79, Elsevier, 2014.](https://doi.org/10.1016/bs.apcsb.2014.06.003)
+- [Dewage S.W., Cisneros G.A., “Computational Analysis of Ammonia Transfer along Two Intra-molecular Tunnels in Staphylococcus aureus Glutamine-dependent Amidotransferase (GatCAB)”, *J. Phys. Chem. B*, 119, 3669-3677, 2015.](https://doi.org/10.1021/jp5123568)
+- [Leddin E., Cisneros G.A., “Comparison of DNA and RNA Substrate Effects on TET2 Structure”, in “Advances in Protein Chemistry and Structural Biology”, T. Karabencheva-Christova and C. Christov Eds., Elsevier, DOI: 10.1016/bs.apcsb.2019.05.002, 2019.](https://doi.org/10.1016/bs.apcsb.2019.05.002)
