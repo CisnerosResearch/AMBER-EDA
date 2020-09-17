@@ -20,7 +20,7 @@ sleep 5
 
 ## Run the program; read in the prompt answers
 ## [Line 1: Name of input; Line 2: Name of prmtop]
-./Residue_E_Decomp_07_15.x < ans.txt
+./Residue_E_Decomp_openmp.x < ans.txt
 
 ## Acquire the process ID for the program execution
 proc_PID=$!
