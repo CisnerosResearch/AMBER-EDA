@@ -43,6 +43,8 @@
         !real *8 E_coul_bin(npairs),E_vdW_bin(npairs)
         !real *8 SE_coul_bin(npairs),SE_vdW_bin(npairs)
   double precision,allocatable::E_coul_bin(:),E_vdW_bin(:),SE_coul_bin(:),SE_vdW_bin(:)
+  double precision,allocatable::coul_std(:,:),vdW_std(:,:)
+  !double precision,allocatable::coul_SDav(:),vdW_SDav(:)
         real *8 sigma,eps
         real *8 sig1,eps1
         real *8 sig2,eps2
@@ -357,6 +359,21 @@
        rewind(802)
        read(802,*)
        print *,'number of samples in file: n_file_sam = ', n_file_sam
+
+! to calculate variance and SD
+       if (i1 == 1) then
+          allocate(coul_std(npairs,n_file_sam),vdw_std(npairs,n_file_sam),&
+                   stat = allochk)
+          if (allochk .gt. 0 ) then
+             write(6,*)'E_decomp:could not allocate coul_std,vdw_std, exiting'
+             stop
+          endif
+       endif
+       coul_std(:,:)=0.d0
+       vdw_std(:,:)=0.d0
+! to calculate variance and SD
+
+!
        !do 210 i2=1,250
        do 210 i2=1,n_file_sam
        read(802,903,end=220,err=220) pos
@@ -389,18 +406,38 @@
         k_bin = iflag(k1)
         E_coul_bin(k_bin) = E_coul_bin(k_bin) + E_coul
         E_vdW_bin(k_bin) = E_vdW_bin(k_bin) + E_vdW
-        SE_coul_bin(k_bin) = SE_coul_bin(k_bin) + E_coul**2
-        SE_vdW_bin(k_bin) = SE_vdW_bin(k_bin) + E_vdW**2
+        coul_std(k_bin,i2) = coul_std(k_bin,i2)+E_coul
+        vdw_std(k_bin,i2) = vdw_std(k_bin,i2)+E_vdW
+        !SE_coul_bin(k_bin) = SE_coul_bin(k_bin) + E_coul**2
+        !SE_vdW_bin(k_bin) = SE_vdW_bin(k_bin) + E_vdW**2
 
    enddo
 !$omp end parallel do
 ! GAC finished parallel part
 
+
  210    continue
 
  220    continue
+
+!       for SE calc
+    do k1 = 1, natpairs
+       k_bin = iflag(k1)
+       do k2 = 1, n_file_sam
+          SE_coul_bin(k_bin) = SE_coul_bin(k_bin) + &
+                 (coul_std(k_bin,k2)-(E_coul_bin(k_bin)/dble(n_file_sam)))**2
+          SE_vdw_bin(k_bin) = SE_vdw_bin(k_bin) + &
+                   (vdw_std(k_bin,k2)-(E_vdW_bin(k_bin)/dble(n_file_sam)))**2
+       enddo
+    enddo
+    coul_std(:,:)=0.d0
+    vdw_std(:,:)=0.d0
+!       for SE calc
+
         close(802)
+
  200    continue
+
 
 !! Change the names of 803 and 806
         open(unit=803,file='fort_coulomb_interaction.dat')
@@ -421,8 +458,14 @@
         do 500 k4=k2+1,nres
         k1 = k1 + 1
         !write(805,906) k1,k2,k4,res_name(k2),res_name(k4)
-        write(803,905) k1,k2,k4,E_coul_bin(k1)/nsam,SE_coul_bin(k1)/nsam
-        write(806,906) k1,k2,k4,E_vdW_bin(k1)/nsam,SE_vdW_bin(k1)/nsam
+        write(803,905) k1,k2,k4,E_coul_bin(k1)/dble(nsam),&
+                       sqrt(SE_coul_bin(k1)/(dble(nsam)-1.d0))/sqrt(dble(nsam))
+        write(806,906) k1,k2,k4,E_vdW_bin(k1)/nsam,&
+                       sqrt(SE_vdW_bin(k1)/(dble(nsam)-1.d0))/sqrt(dble(nsam))
+
+! GAC 9/2020 update SE to SD calc
+!        write(803,905) k1,k2,k4,E_coul_bin(k1)/nsam,SE_coul_bin(k1)/nsam
+!        write(806,906) k1,k2,k4,E_vdW_bin(k1)/nsam,SE_vdW_bin(k1)/nsam
  500    continue
  904    format(i10)
  905    format(3i10,2e20.12)
