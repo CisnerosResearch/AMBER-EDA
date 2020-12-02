@@ -130,7 +130,7 @@ The program will have 3 output files: `fort_sanity_check.txt`,
 ## Data Analysis
 
 A number of R-based analysis scripts and their explanations can be found on
-[emleddin's GitHub](https://github.com/emleddin/research-scripts/tree/main/analysis/EDA).
+[emleddin's GitHub](https://github.com/emleddin/research-scripts/tree/main/amber-analysis/EDA).
 
 ## Related Publications
 
