@@ -1,5 +1,7 @@
 # AMBER EDA
 
+[![GPL license](https://img.shields.io/badge/license-GPLv3-blue.svg?style=flat)](https://github.com/CisnerosResearch/AMBER-EDA/blob/main/LICENSE)
+
 This repository contains a Fortran 90 program and associated files for
 performing an energy decomposition analysis (EDA) of AMBER molecular dynamics
 simulations.
