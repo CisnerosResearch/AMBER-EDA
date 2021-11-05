@@ -4,10 +4,10 @@
 !  June 19 2009
 !  modified by G. Andres Cisneros to f90
 !  June 30 2009
-!  attempted to mpi-ify by EML
-!  ?? ?? 2019
 !  OMP parallel GAC
 !  Aug 25 2020
+!  Input help EML
+!  Nov 04 2021
 !compile: ifort Residue_E_Decomp_openmp.f90 -o Residue_E_Decomp_openmp.x -qopenmp
 !
 !
@@ -61,7 +61,7 @@
   integer,allocatable::i_res_point(:),at_type_index(:)
         integer nlast_at
         integer k1,k2,k3,k4,k5,k6,k7,k8,k9
-        integer m1,m2,i1,i2
+        integer m1,m2,i1,i2,i_tmp
         integer k_bin
         !integer nat_in_res(nres_max)
   integer,allocatable::nat_in_res(:)
@@ -111,7 +111,6 @@
         write(6,*)'Name of prmtop file?'
         read(5,*),prmfile
         prmfile=trim(prmfile)
-        open(801,file=inpfile)
         !prmfile='AA_check_neutral.prmtop'
         open(801,file=inpfile)
 !    n_res = total number of non-water residues
@@ -130,6 +129,67 @@
         read(801,*) ntype_max,junk
         print *,ntype_max
 
+! EML: catch input errors
+        ! Create a format for printing the warnings
+        121 format(a, i0, a)
+        125 format(a, i0, a, i0, a)
+        555 format(20x, a)
+        556 format(/)
+
+        if (nprotat .gt. nat_max) then
+             write(*,556, advance="no") ! Only 1 blankline, not 2
+             write(*,555) '****************************'
+             write(*,555) '****** INPUT MISMATCH ******'
+             write(*,555) '****************************'
+             write(*,121), 'ERROR: Number of protein atoms, ', nprotat, ', is&
+              & greater than the'
+             write(*,121), ' total number of atoms, ', nat_max, '.'
+             !print *, 'HERE 1.'
+             call print_input_warning(inpfile)
+             stop
+        end if
+
+        if (n_res .gt. nres_max) then
+             write(*,556, advance="no")
+             write(*,555) '****************************'
+             write(*,555) '****** INPUT MISMATCH ******'
+             write(*,555) '****************************'
+             write(*,121) 'ERROR: Number of protein residues, ', n_res, ', is&
+              & greater than the'
+             write(*,121) ' total number of residues ', nres_max, '.'
+             !print *, 'HERE 2.'
+             call print_input_warning(inpfile)
+             stop
+        end if
+
+        if (nprotat .lt. n_res) then
+             write(*,556, advance="no")
+             write(*,555) '****************************'
+             write(*,555) '****** INPUT MISMATCH ******'
+             write(*,555) '****************************'
+             write(*,121) 'ERROR: Number of protein atoms, ', nprotat, ', is&
+              & less than the'
+             write(*,121) ' number of protein residues, ', nres_max, '.'
+             !print *, 'HERE 3.'
+             call print_input_warning(inpfile)
+             stop
+        end if
+
+        if (nat_max .lt. nres_max) then
+             write(*,556, advance="no")
+             write(*,555) '****************************'
+             write(*,555) '****** INPUT MISMATCH ******'
+             write(*,555) '****************************'
+             write(*,121), 'ERROR: Number of total atoms, ', nat_max, ', is&
+              & less than the'
+             write(*,121), ' total number of residues, ', nres_max, '.'
+             !print *, 'HERE 4.'
+             call print_input_warning(inpfile)
+             stop
+        end if
+
+! END EML
+
         nres = n_res
         npairs=(nres*(nres-1))/2
         natpairs=(nprotat*(nprotat+1))/2
@@ -141,9 +201,20 @@
      write(6,*)'E_decomp:could not allocate at_chg, exiting'
      stop
   endif
+  allocate(at_type_index(nat_max),am_at_type(nat_max), stat = allochk)
+  if (allochk .gt. 0 ) then
+     write(6,*)'E_decomp:could not allocate at_type_index,nat_in_res,&
+                & exiting'
+     stop
+  endif
   allocate(xlj_12(ntype_max),xlj_6(ntype_max), stat = allochk)
   if (allochk .gt. 0 ) then
      write(6,*)'E_decomp:could not allocate xlj_12, xlj_6, exiting'
+     stop
+  endif
+  allocate(std_am_at_type(ntype_max), stat = allochk)
+  if (allochk .gt. 0 ) then
+     write(6,*)'E_decomp:could not allocate std_atm_at_type, exiting'
      stop
   endif
   allocate(charge_ij(natpairs),vdw_12(natpairs),vdw_6(natpairs), stat = allochk)
@@ -168,23 +239,16 @@
      write(6,*)'E_decomp:could not allocate pos, exiting'
      stop
   endif
-  allocate(i_res_point(nres_max),at_type_index(nat_max),nat_in_res(nres_max),&
+  allocate(i_res_point(nres_max),nat_in_res(nres_max),res_name(nres_max), &
            stat = allochk)
   if (allochk .gt. 0 ) then
-     write(6,*)'E_decomp:could not allocate i_res_point,at_type_index,nat_in_res,&
+     write(6,*)'E_decomp:could not allocate i_res_point,nat_in_res,res_name,&
                 & exiting'
      stop
   endif
   allocate(iflag(natpairs),at_index_i(natpairs),at_index_j(natpairs), stat = allochk)
   if (allochk .gt. 0 ) then
      write(6,*)'E_decomp:could not allocate iflag,at_index_i,at_index_j, exiting'
-     stop
-  endif
-  allocate(res_name(nres_max),am_at_type(nat_max),std_am_at_type(ntype_max),&
-           stat = allochk)
-  if (allochk .gt. 0 ) then
-     write(6,*)'E_decomp:could not allocate res_name,am_at_type,std_atm_at_type,&
-                & exiting'
      stop
   endif
 
@@ -206,9 +270,9 @@
 ! res_name = residue names
 ! am_at_type = amber atom types
 
-        call rdparm(natom,nat_max,ntypes,i_res_point,at_type_index,&
+        call rdparm(natom,nat_max,nres_max,ntypes,at_type_index,&
              at_chg,xlj_12,xlj_6,&
-              res_name,am_at_type,prmfile)
+              res_name,am_at_type,i_res_point,prmfile)
 
 ! nlast_at = The last atom to be considered
         nlast_at = i_res_point(n_res+1) -1
@@ -231,7 +295,7 @@
 
 !
 !! Change the output name
-        open(unit=804,file='fort_sanity_check.txt')
+        open(unit=804,file='fort_logic_check.txt')
 !!
         do 30 k1=1,k3
         write(804,901) k1,std_am_at_type(k1)
@@ -294,6 +358,7 @@
         SE_vdW_bin(k1) = 0.0
         SE_coul_bin(k1) = 0.0
  110    continue
+
 !
 !   extract charges and assign them in a new array
 !
@@ -303,6 +368,7 @@
 !    residue k2 ...
         do 120 k2=1,nres-1
 
+
 !    residue k4 ...
 !   ********WARNING************************
 !   K4 should start two residues away from k2. Otherwise, 1-2,1-3 and 1-4
@@ -311,10 +377,12 @@
         do 130 k4=k2+1,nres
          k_bin = k_bin + 1
 
+
 !     atom k3 of residue k2
           do 140 k3=1,nat_in_res(k2)
         at_id_i = i_res_point(k2) + k3 - 1
         at_type_i = at_type_index(at_id_i)
+
 
 !     atom k5 of residue k4
            do 150 k5=1,nat_in_res(k4)
@@ -322,6 +390,7 @@
         at_type_j = at_type_index(at_id_j)
 
         k1 = k1 + 1
+
 
 !     assign the charge
         charge_ij(k1) =  at_chg(at_id_i) * at_chg(at_id_j)
@@ -474,20 +543,21 @@
         stop
         end
 
-      subroutine rdparm(natom,nat,ntypes,i_res_point,at_type_index,&
+      subroutine rdparm(natom,nat,nresin,ntypes,at_type_index,&
              at_chg,xlj_12,xlj_6,&
-              res_name,am_at_type,prmfile)
+              res_name,am_at_type,i_res_point,prmfile)
 
 !
 !  subroutine reading information from prmtop
 !
       integer natom,ntypes,nbonh,mbona,ntheth,mtheta,nphih,mphia,nat
-      integer nhparm,nparm,nnb,nres,nbona,ntheta,nphia
+      integer nhparm,nparm,nnb,nres,nresin,nbona,ntheta,nphia
       integer numbnd,numang,nptra,natyp,nphb,ifpert,nbper,ngper,ndper
       integer mbper,mgper,mdper,ifbox,nmxrs,ifcap,numextra,ncopy
       integer nf,nttyp,ntype,allochk
       integer ix_2(nat),ix_3(nat),ix_4(nat),ix_5(nat)
-      integer i_res_point(nat), at_type_index(nat)
+      integer at_type_index(nat)
+      integer i_res_point(nresin)
       integer, allocatable::ix_1(:)
       real *8 ax_1(nat*3)
       real *8 at_chg(nat),at_mass(nat)
@@ -610,6 +680,11 @@
           print *, 'nres = ',nres
           read(nf,104) (i_res_point(i),i=1,nres)
           print 104, nres,i_res_point(1),i_res_point(nres),i_res_point(nres-1)
+        !print *,'printing i_res_point'
+        !do i_tmp = 1,nres
+        !   print *,i_res_point(i_tmp)
+        !enddo
+        !print *,'finished printing i_res_point'
           print *, 'nres = ',nres
 
 !    ----- READ THE PARAMETERS -----
@@ -839,5 +914,41 @@
 !C       read(nf,*)
 !C       read(nf,103) oldbeta,duma,dumb,dumc
 
+print *, 'I finished reading the parmtop'
+
         return
+        end
+
+        ! EML Add input warning
+        subroutine print_input_warning(inpfile)
+            ! implicit none
+             character *80, intent(in) :: inpfile
+
+             ! Format for the exit print
+             555 format(20x,a)
+             556 format(/)
+
+             write(*,556)
+             write(*,555) '------ About Inputs ------'
+             write(*,555) '--------------------------'
+             write(*,*) 'Please check your input file, ', trim(inpfile),&
+             &', and try again!'
+             write(*,556, advance="no") ! Makes only 1 blankline
+             write(*,*) 'Input should be given with the following &
+             &information on new lines:'
+             write(*,*) '1 : Number of protein residues to evaluate'
+             write(*,*) '2 : Number of coordinate files to process'
+             write(*,*) '3 : Total number of atoms in the prmtop'
+             write(*,*) '4 : Number of protein atoms to evaluate'
+             write(*,*) '    Hint: larger than line 1!'
+             write(*,*) '5 : Total number of residues in the prmtop'
+             write(*,*) '    Hint: smaller than line 3!'
+             write(*,*) '6 : Max number of Lennard-Jones Types'
+             write(*,*) '    Note: 2000 is usually sufficient.'
+             write(*,*) '7+: Name of coordinate file, each on a newline'
+             write(*,556, advance="no")
+             write(*,555) '******************************'
+             write(*,555) '**** FATAL ERROR: EXITING ****'
+             write(*,555) '******************************'
+             write(*,556, advance="no")
         end

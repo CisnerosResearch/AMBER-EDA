@@ -124,7 +124,7 @@ a queuing system.
 
 ## Program Output
 
-The program will have 3 output files: `fort_sanity_check.txt`,
+The program will have 3 output files: `fort_logic_check.txt`,
 `fort_coulomb_interaction.dat`, and `fort_vdw_interaction.dat`.
 `fort_coulomb_interaction.dat` contains the Coulomb energies and
 `fort_vdw_interaction.dat` contains the van der Waals energies.
